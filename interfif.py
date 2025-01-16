@@ -1,5 +1,9 @@
-import datetime
+﻿import datetime
 from datetime import timedelta
+
+import tkinter
+from tkinter import *
+from tkinter import filedialog
 
 import openpyxl
 import requests.api
@@ -61,27 +65,53 @@ def getShortArshinNumber(fullNumber):
     return t[-1]
 
 
-# fileName = 'C://1//шаблон-1-2.xlsx'
-fileName = sys.argv[1]
-wb = openpyxl.load_workbook(fileName)
-sheet = wb['Лист1']
-cB = 2
-cD = 4
-cF = 6
-cAI = 35
-r = 2
-while r < 65536:
-    cletB = sheet.cell(row=r, column=cB).value
-    if cletB == None:
-        break
-    vCellB = getTypeSIFromStringCell(cletB)
-    cletD = sheet.cell(row=r, column=cD).value
-    vCellD = getSerialNumberFromStringCell(cletD)
-    cletF = sheet.cell(row=r, column=cF).value
-    vCellF = getStrFromDataCell(cletF)
-    sheet.cell(row=r, column=cAI).value = getShortArshinNumber(getPost(vCellB, vCellD, vCellF))
-    r += 1
-wb.save(fileName)
+def PeekFile():
+    file = filedialog.askopenfilename(filetypes = (("Excel files","*.xlsx"),("all files","*.*")))
+    lblFile.configure(text=file)
+
+
+def AskFromArshin():
+    lblRes.configure(text="Запрашиваю данные из Аршина")
+    fileName =  lblFile.cget("text")
+    wb = openpyxl.load_workbook(fileName)
+    sheet = wb['Лист1']
+    cB = 2
+    cD = 4
+    cF = 6
+    cAI = 35
+    r = 2
+    while r < 65536:
+        cletB = sheet.cell(row=r, column=cB).value
+        if cletB == None:
+            break
+        vCellB = getTypeSIFromStringCell(cletB)
+        cletD = sheet.cell(row=r, column=cD).value
+        vCellD = getSerialNumberFromStringCell(cletD)
+        cletF = sheet.cell(row=r, column=cF).value
+        vCellF = getStrFromDataCell(cletF)
+        sheet.cell(row=r, column=cAI).value = getShortArshinNumber(getPost(vCellB, vCellD, vCellF))
+        r += 1
+    wb.save(fileName)
+    lblRes.configure(text="Данные из Аршина получены")
+
+
+window = Tk()
+window.geometry('500x250')
+window.title("InterFIF - загрузка данных из ФГИС Аршин")
+lblInfo = Label(window, text="Выберите файл xlsx")
+lblInfo.grid(column=0, row=0)
+buttonPeek = Button(window, text="Выбрать XLSX файл", command=PeekFile)
+buttonPeek.grid(column=0, row=1)
+lblFile = Label(window, text="Файл не выбран")
+lblFile.grid(column=1, row=1)
+buttonPeek = Button(window, text="Выполнить запрос из ФГИС Аршин", command=AskFromArshin)
+buttonPeek.grid(column=0, row=2)
+lblRes = Label(window, text="Запрос не произведён")
+lblRes.grid(column=1, row=2)
+window.mainloop()
+
+
+
 
 
 
