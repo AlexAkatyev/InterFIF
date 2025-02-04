@@ -32,6 +32,8 @@ struct VerifyRecord
   QString SI2Number;
   QString SI3Name;
   QString SI3Number;
+  QString SI4Name;
+  QString SI4Number;
   QString Temperature;
   QString Pressure;
   QString Humidity;
@@ -70,7 +72,7 @@ InterFIF::InterFIF(QWidget *parent)
   connect(_ui->SelectLoadFromArshin, &QAbstractButton::released, this, &InterFIF::setMode);
   connect(_ui->pushRun, &QAbstractButton::released, this, &InterFIF::route);
   setMode();
-  this->setWindowTitle("InterFIF v1.2");
+  this->setWindowTitle("InterFIF v1.3");
 
   InfoWindow* info = new InfoWindow(this);
   connect(_ui->Informator, &QAbstractButton::released, info, &InfoWindow::show);
@@ -218,6 +220,8 @@ std::vector<VerifyRecord> InterFIF::loadProtocol(QString protocol)
     vr.SI2Number = "si2number";
     vr.SI3Name = "si3name";
     vr.SI3Number = "si3number";
+    vr.SI4Name = "si4name";
+    vr.SI4Number = "si4number";
     vr.Temperature = "temperature";
     vr.Pressure = "pressure";
     vr.Humidity = "humidity";
@@ -279,6 +283,8 @@ std::vector<VerifyRecord> InterFIF::loadProtocol(QString protocol)
       vr.SI2Number = getCellToString(statSheet, row, col++);
       vr.SI3Name = getCellToString(statSheet, row, col++);
       vr.SI3Number = getCellToString(statSheet, row, col++);
+      vr.SI4Name = getCellToString(statSheet, row, col++);
+      vr.SI4Number = getCellToString(statSheet, row, col++);
       vr.Temperature = getCellToString(statSheet, row, col++);
       vr.Pressure = getCellToString(statSheet, row, col++);
       vr.Humidity = getCellToString(statSheet, row, col++);
@@ -490,6 +496,9 @@ void InterFIF::makeToArshin(std::vector<VerifyRecord> recs)
     sl = rec.SI3Name.split(" ");
     if (sl.size() > 0 && !rec.SI3Number.isEmpty())
       mis.push_back({sl.at(0), rec.SI3Number});
+    sl = rec.SI4Name.split(" ");
+    if (sl.size() > 0 && !rec.SI4Number.isEmpty())
+      mis.push_back({sl.at(0), rec.SI4Number});
     if (mis.size() > 0)
     {
       xmlWriter.writeStartElement("gost:mis");

@@ -1,4 +1,4 @@
-﻿import datetime
+import datetime
 from datetime import timedelta
 
 import tkinter
@@ -48,9 +48,9 @@ def getPost(cletB, cletD, cletF):
     u = 'https://fgis.gost.ru/fundmetrology/eapi/vri'
     param = {'year': cletF[:4], 'search': cletB + ' ' + cletD}
     time.sleep(1)
-    resp = requests.get(url= u, params= param)
+    resp = requests.get(url=u, params=param, verify=False)
     # print(resp.text)
-    data =  json.loads(resp.text)
+    data = json.loads(resp.text)
     res = data['result']
     if res['count'] == 0:
         return ''
@@ -78,7 +78,7 @@ def AskFromArshin():
     cB = 2
     cD = 4
     cF = 6
-    cAI = 35
+    cAK = 37
     r = 2
     while r < 65536:
         cletB = sheet.cell(row=r, column=cB).value
@@ -89,7 +89,7 @@ def AskFromArshin():
         vCellD = getSerialNumberFromStringCell(cletD)
         cletF = sheet.cell(row=r, column=cF).value
         vCellF = getStrFromDataCell(cletF)
-        sheet.cell(row=r, column=cAI).value = getShortArshinNumber(getPost(vCellB, vCellD, vCellF))
+        sheet.cell(row=r, column=cAK).value = getShortArshinNumber(getPost(vCellB, vCellD, vCellF))
         r += 1
     wb.save(fileName)
     lblRes.configure(text="Данные из Аршина получены")
@@ -100,7 +100,7 @@ window.geometry('500x250')
 window.title("InterFIF - загрузка данных из ФГИС Аршин")
 lblInfo = Label(window, text="Выберите файл xlsx")
 lblInfo.grid(column=0, row=0)
-buttonPeek = Button(window, text="Выбрать XLSX файл", command=PeekFile)
+buttonPeek = Button(window, text="Открыть XLSX файл", command=PeekFile)
 buttonPeek.grid(column=0, row=1)
 lblFile = Label(window, text="Файл не выбран")
 lblFile.grid(column=1, row=1)
