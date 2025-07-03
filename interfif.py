@@ -30,6 +30,7 @@ def getSerialNumberFromStringCell(v):
     return result
 
 
+# =ЕСЛИОШИБКА(__xludf.dummyfunction("""COMPUTED_VALUE""");45782,3465277777)
 # "verification_date": "2020-12-01T00:00:00Z",
 def getStrFromDataCell(v):
     r = v.split(',')[1]
@@ -38,7 +39,7 @@ def getStrFromDataCell(v):
     for s in r:
         if s not in [')', '(', '"']:
             dd += s
-    d = datetime.date(1900, 1, 1)
+    d = datetime.date(1899, 12, 30)
     d = d + timedelta(int(dd))
     result = d.strftime("%Y-%m-%dT00:00:00Z")
     return result
@@ -46,7 +47,10 @@ def getStrFromDataCell(v):
 
 def getPost(cletB, cletD, cletF):
     u = 'https://fgis.gost.ru/fundmetrology/eapi/vri'
-    param = {'year': cletF[:4], 'search': cletB + ' ' + cletD}
+    # print(cletF[:10] + " : ")
+    # print(cletB + " : ")
+    # print(cletD + " : ")
+    param = {'verification_date': cletF[:10], 'mit_number': cletB, 'mi_number': cletD, 'rows': 100}
     time.sleep(1)
     resp = requests.get(url=u, params=param, verify=False)
     # print(resp.text)
