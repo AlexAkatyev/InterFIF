@@ -72,7 +72,7 @@ InterFIF::InterFIF(QWidget *parent)
   connect(_ui->SelectLoadFromArshin, &QAbstractButton::released, this, &InterFIF::setMode);
   connect(_ui->pushRun, &QAbstractButton::released, this, &InterFIF::route);
   setMode();
-  this->setWindowTitle("InterFIF v1.3");
+  this->setWindowTitle("InterFIF v1.4");
 
   InfoWindow* info = new InfoWindow(this);
   connect(_ui->Informator, &QAbstractButton::released, info, &InfoWindow::show);
@@ -517,7 +517,11 @@ void InterFIF::makeToArshin(std::vector<VerifyRecord> recs)
     xmlWriter.writeTextElement("gost:pressure", rec.Pressure.isEmpty() ? "-" : (rec.Pressure + " кПа"));
     xmlWriter.writeTextElement("gost:hymidity", rec.Humidity.isEmpty() ? "-" : (rec.Humidity + " %"));
     xmlWriter.writeEndElement(); // conditions
-    //xmlWriter.writeTextElement("gost:additional_info", "ПП №" + rec.NumberPi);
+    QString addInfo = _ui->AdditionalInfo->text();
+    if (addInfo.length() > 0)
+    {
+        xmlWriter.writeTextElement("gost:additional_info", addInfo  );
+    }
     xmlWriter.writeEndElement(); // result
   }
   xmlWriter.writeEndElement(); // application
