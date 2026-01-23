@@ -50,6 +50,7 @@ struct VerifyRecord
   QString O;
   QString SNILS;
   QString ArshinNumber;
+  QString AdditionInfo;
 };
 
 
@@ -238,6 +239,7 @@ std::vector<VerifyRecord> InterFIF::loadProtocol(QString protocol)
     vr.O = "o";
     vr.SNILS = "snils";
     vr.ArshinNumber = "arshinnumber";
+    vr.AdditionInfo = "additioninfo";
     result.push_back(vr);
   }
   else if (!protocol.isEmpty())
@@ -301,6 +303,7 @@ std::vector<VerifyRecord> InterFIF::loadProtocol(QString protocol)
       vr.O = getCellToString(statSheet, row, col++);
       vr.SNILS = getCellToString(statSheet, row, col++);
       vr.ArshinNumber = getCellToString(statSheet, row, col++);
+      vr.AdditionInfo = getCellToString(statSheet, row, col++);
       result.push_back(vr);
     }
     // освобождение памяти
@@ -517,10 +520,9 @@ void InterFIF::makeToArshin(std::vector<VerifyRecord> recs)
     xmlWriter.writeTextElement("gost:pressure", rec.Pressure.isEmpty() ? "-" : (rec.Pressure + " кПа"));
     xmlWriter.writeTextElement("gost:hymidity", rec.Humidity.isEmpty() ? "-" : (rec.Humidity + " %"));
     xmlWriter.writeEndElement(); // conditions
-    QString addInfo = _ui->AdditionalInfo->text();
-    if (addInfo.length() > 0)
+    if (rec.AdditionInfo.length() > 0)
     {
-        xmlWriter.writeTextElement("gost:additional_info", addInfo  );
+        xmlWriter.writeTextElement("gost:additional_info", rec.AdditionInfo);
     }
     xmlWriter.writeEndElement(); // result
   }
