@@ -73,7 +73,7 @@ InterFIF::InterFIF(QWidget *parent)
   connect(_ui->SelectLoadFromArshin, &QAbstractButton::released, this, &InterFIF::setMode);
   connect(_ui->pushRun, &QAbstractButton::released, this, &InterFIF::route);
   setMode();
-  this->setWindowTitle("InterFIF v1.4");
+  this->setWindowTitle("InterFIF v1.5");
 
   InfoWindow* info = new InfoWindow(this);
   connect(_ui->Informator, &QAbstractButton::released, info, &InfoWindow::show);
@@ -370,13 +370,13 @@ void InterFIF::makeToFsa(std::vector<VerifyRecord> recs)
     if (rec.Valid)
       xmlWriter.writeTextElement("DateEndVerification", rec.ValidityData.toString("yyyy-MM-dd"));
     xmlWriter.writeTextElement("TypeMeasuringInstrument", rec.TypeSI);
-    xmlWriter.writeStartElement("ApprovedEmployee");
+    xmlWriter.writeStartElement("ApprovedEmployees");
     xmlWriter.writeStartElement("Name");
     xmlWriter.writeTextElement("Last", rec.F);
     xmlWriter.writeTextElement("First", rec.I);
     xmlWriter.writeEndElement(); // Name
     xmlWriter.writeTextElement("SNILS", rec.SNILS);
-    xmlWriter.writeEndElement(); // ApprovedEmployee
+    xmlWriter.writeEndElement(); // ApprovedEmployees
     xmlWriter.writeTextElement("ResultVerification", rec.Valid ? "1" : "2");
     xmlWriter.writeEndElement(); // VerificationMeasuringInstrument
   }
