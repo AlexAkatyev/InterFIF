@@ -302,6 +302,7 @@ std::vector<VerifyRecord> InterFIF::loadProtocol(QString protocol)
       vr.I = getCellToString(statSheet, row, col++);
       vr.O = getCellToString(statSheet, row, col++);
       vr.SNILS = getCellToString(statSheet, row, col++);
+      vr.SNILS = vr.SNILS.replace("-", "");
       vr.ArshinNumber = getCellToString(statSheet, row, col++);
       vr.AdditionInfo = getCellToString(statSheet, row, col++);
       result.push_back(vr);
