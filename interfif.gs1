@@ -32,7 +32,7 @@ function generateXmlContent() {
   let xmlString = '<?xml version="1.0" encoding="UTF-8"?>\n<gost:application xmlns:gost="urn://fgis-arshin.gost.ru/module-verifications/import/2020-06-19">\n';
   const headers = data[0];
 
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 2; i < data.length; i++) {
     xmlString += '    <gost:result>\n';
     let valid = data[i][9] == 'Пригодно';
     xmlString += '        <gost:miInfo>\n';
