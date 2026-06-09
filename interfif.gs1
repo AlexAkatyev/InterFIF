@@ -77,6 +77,10 @@ function generateXmlContent() {
     xmlString += `            <gost:pressure>${data[i][22]} Íœ‡</gost:pressure>\n`;
     xmlString += `            <gost:hymidity>${data[i][23]} %</gost:hymidity>\n`;
     xmlString += `        </gost:conditions>\n`;
+    let addInfo = data[i][37];
+    if (addInfo != ''){
+      xmlString += `        <gost:additional_info>${addInfo}</gost:additional_info>\n`;
+    }
     xmlString += '    </gost:result>\n';
   }
   xmlString += '</gost:application>';
