@@ -62,7 +62,7 @@ function generateXmlContent() {
       if (reason == '') {
         reason = 'Ќе соответствует требовани€м методики поверки';
       }
-      xmlString += `            <gost:reasons>${reason}</gost:mitypeNumber>\n`;
+      xmlString += `            <gost:reasons>${reason}</gost:reasons>\n`;
       xmlString += '        </gost:inapplicable>\n';
     }
     xmlString += `        <gost:docTitle>${data[i][7]}</gost:docTitle>\n`;
