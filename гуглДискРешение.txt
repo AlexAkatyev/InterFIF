@@ -1,0 +1,187 @@
+Шаг 1. Локальный Python-скрипт на ПКУстановите официальный клиент Google Диска
+ для компьютера. Создайте в нем рабочую папку (например, Arshin_Exchange).Этот
+  Python-скрипт должен работать на ПК в фоновом режиме. Он постоянно проверяет
+  папку на наличие файла request.json, обрабатывает его и сохраняет ответ в
+  response.json.
+
+
+
+import os
+import json
+import time
+import requests
+
+# Отключаем предупреждения SSL
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Укажите точный путь к папке внутри вашего локального Google Диска
+WATCH_FOLDER = r"C:\Users\ИмяПользователя\Google Drive\Arshin_Exchange"
+
+REQ_FILE = os.path.join(WATCH_FOLDER, "request.json")
+RESP_FILE = os.path.join(WATCH_FOLDER, "response.json")
+
+def getPost(cletB, cletD, cletF):
+    u = 'https://gost.ru'
+    attempt = 0
+    while attempt < 10:
+        time.sleep(1)
+        param = {'year': cletF[:4], 'mit_number': cletB, 'mi_number': cletD, 'start': attempt * 100, 'rows': 100}
+        try:
+            resp = requests.get(url=u, params=param, verify=False, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                if 'result' in data and 'items' in data['result']:
+                    if data['result']['count'] == 0:
+                        return ''
+                    for item in data['result']['items']:
+                        if 'result_docnum' in item and 'ДЮЮ' in item['result_docnum']:
+                            return item['result_docnum']
+        except Exception as e:
+            print(f"Ошибка запроса: {e}")
+        attempt += 1
+
+    param = {'verification_date': cletF[:10], 'mit_number': cletB, 'mi_number': cletD, 'rows': 100}
+    attempt = 0
+    while attempt < 2:
+        time.sleep(1)
+        try:
+            resp = requests.get(url=u, params=param, verify=False, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                if 'result' in data and 'items' in data['result']:
+                    if data['result']['count'] == 0:
+                        return ''
+                    for item in data['result']['items']:
+                        if 'result_docnum' in item and 'ДЮЮ' in item['result_docnum']:
+                            return item['result_docnum']
+        except Exception as e:
+            print(f"Ошибка запроса: {e}")
+        attempt += 1
+
+    return ''
+
+print("Мониторинг папки запущен. Ожидание файлов запросов...")
+
+while True:
+    # Если появился файл запроса от Google Таблиц
+    if os.path.exists(REQ_FILE):
+        print("Обнаружен новый запрос. Обработка...")
+        time.sleep(0.5) # Пауза, чтобы файл успел полностью записаться на диск
+
+        try:
+            with open(REQ_FILE, 'r', encoding='utf-8') as f:
+                req_data = json.load(f)
+
+            # Выполняем вашу функцию
+            result_docnum = getPost(req_data['cletB'], req_data['cletD'], req_data['cletF'])
+
+            # Готовим ответ
+            response_data = {'result_docnum': result_docnum, 'status': 'success'}
+
+            # Записываем файл ответа
+            with open(RESP_FILE, 'w', encoding='utf-8') as f:
+                json.dump(response_data, f, ensure_ascii=False, indent=4)
+
+            # Удаляем файл запроса, чтобы показать Google Скрипту, что мы закончили
+            os.remove(REQ_FILE)
+            print("Ответ успешно записан, запрос удален.")
+
+        except Exception as e:
+            print(f"Ошибка при обработке файла: {e}")
+            # В случае критической ошибки создаем пустой ответ, чтобы не вешать Google Скрипт
+            with open(RESP_FILE, 'w', encoding='utf-8') as f:
+                json.dump({'result_docnum': 'Ошибка на ПК', 'status': 'error'}, f)
+            if os.path.exists(REQ_FILE):
+                os.remove(REQ_FILE)
+
+    time.sleep(2) # Проверяем папку каждые 2 секунды
+
+
+
+
+Шаг 2. Код в Google Apps ScriptЭтот код создает файл request.json в указанной
+папке Google Диска, затем запускает цикл ожидания файла response.json. Как
+только файл появляется — скрипт считывает его, удаляет (чтобы очистить папку к
+следующему разу) и возвращает результат в таблицу.
+
+
+
+function processViaPythonFile(cletB, cletD, cletF) {
+  // 1. Укажите ID папки "Arshin_Exchange" на вашем Google Диске
+  // (ID можно взять из адресной строки браузера, когда вы находитесь внутри этой папки)
+  const folderId = 'ВСТАВЬТЕ_СЮДА_ID_ПАПКИ_GOOGLE_DRIVE';
+  const folder = DriveApp.getFolderById(folderId);
+
+  // Перед началом работы удаляем старые файлы ответов, если они залежались
+  const oldResponses = folder.getFilesByName('response.json');
+  while (oldResponses.hasNext()) { oldResponses.next().setTrashed(true); }
+  const oldRequests = folder.getFilesByName('request.json');
+  while (oldRequests.hasNext()) { oldRequests.next().setTrashed(true); }
+
+  // 2. Создаем JSON с входящими параметрами для Python
+  const requestPayload = {
+    'cletB': cletB,
+    'cletD': cletD,
+    'cletF': cletF
+  };
+
+  // Создаем файл на Диске. Локальное приложение Google Диск тут же скачает его на ПК
+  folder.createFile('request.json', JSON.stringify(requestPayload), MimeType.PLAIN_TEXT);
+  Logger.log('Файл запроса создан. Ожидание ответа от Python...');
+
+  // 3. Цикл ожидания ответа от локального компьютера
+  const maxWaitTimeMs = 60000; // Максимальное время ожидания (60 секунд)
+  const checkIntervalMs = 3000; // Проверять наличие файла каждые 3 секунды
+  let elapsedTimeMs = 0;
+
+  while (elapsedTimeMs < maxWaitTimeMs) {
+    Utilities.sleep(checkIntervalMs);
+    elapsedTimeMs += checkIntervalMs;
+
+    // Ищем файл ответа
+    const files = folder.getFilesByName('response.json');
+    if (files.hasNext()) {
+      const responseFile = files.next();
+
+      // Даем файлу 1 секунду на полную синхронизацию контента облаком
+      Utilities.sleep(1000);
+
+      // Читаем содержимое файла
+      const content = responseFile.getBlob().getDataAsString();
+
+      // Удаляем файл ответа, чтобы папка оставалась чистой
+      responseFile.setTrashed(true);
+
+      // Разбираем JSON и возвращаем результат
+      const responseData = JSON.parse(content);
+      Logger.log('Ответ от Python успешно получен!');
+      return responseData.result_docnum;
+    }
+  }
+
+  // Если время вышло, а ответа нет (например, выключен Python на ПК)
+  Logger.log('Превышено время ожидания ответа от ПК.');
+  return 'Ошибка: Превышен таймаут';
+}
+
+// Тестовая функция для запуска из редактора
+function testFileExchange() {
+  const finalResult = processViaPythonFile('НомерТипаСИ', 'ЗаводскойНомер', '2026-03-15');
+  Logger.log('Результат обработки файла: ' + finalResult);
+}
+
+
+
+
+Как это работает на практике:
+1. Вы запускаете функцию testFileExchange() в Google Sheets.
+2. В вашей папке на Google Drive создается файл request.json.
+3. Программа Google Диск на вашем ПК мгновенно скачивает этот файл в локальную папку.
+4. Python-скрипт видит файл, считывает данные, обращается во ФГИС «АРШИН» с вашего
+домашнего IP.
+5. Нашедшийся номер документа Python сохраняет в файл response.json в
+ту же папку и удаляет request.json.
+6. Программа Google Диск выгружает файл ответа в облако.
+7. Google Скрипт, который всё это время крутился в цикле ожидания, видит файл
+response.json, забирает текст оттуда и удаляет его с Диска.
