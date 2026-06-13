@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 10px; font-size: 14px; }
+      .form-group { margin-bottom: 15px; }
+      button { background-color: #008CBA; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; }
+      #status { margin-top: 15px; font-weight: bold; color: green; }
+    </style>
+  </head>
+  <body>
+    <div class="form-group">
+      <label style="font-weight:bold; display:block; margin-bottom:10px;">Выберите файл arshin_data.json с результатами:</label>
+      <input type="file" id="fileInput" accept=".json">
+    </div>
+    <button onclick="uploadJSON()">Загрузить данные в таблицу</button>
+    <div id="status"></div>
+
+    <script>
+      function uploadJSON() {
+        var fileInput = document.getElementById('fileInput');
+        if (fileInput.files.length === 0) {
+          alert('Пожалуйста, выберите файл!');
+          return;
+        }
+
+        var file = fileInput.files[0];
+        var reader = new FileReader();
+
+        document.getElementById('status').innerText = "Обработка и запись данных...";
+
+        reader.onload = function(e) {
+          var contents = e.target.result;
+          google.script.run.withSuccessHandler(function(responseMessage) {
+            document.getElementById('status').innerText = responseMessage;
+            setTimeout(function() {
+              google.script.host.close();
+            }, 2000);
+          }).processImportedJSON(contents);
+        };
+        reader.readAsText(file);
+      }
+    </script>
+  </body>
+</html>
