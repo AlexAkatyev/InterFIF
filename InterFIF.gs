@@ -132,6 +132,9 @@ function generatePythonScriptArshin(startRow, endRow) {
   if (isNaN(endRow) || endRow < startRow) endRow = sheet.getLastRow();
 
   for (let r = startRow; r <= endRow; r++) {
+    let cellAK = sheet.getRange(r, 37).getValue();
+    if (cellAK != '') continue;
+
     let cellB = sheet.getRange(r, 2).getValue();
     let cellD = sheet.getRange(r, 4).getValue();
 
