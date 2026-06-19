@@ -5,6 +5,7 @@ function onOpen() {
     .addItem('2. Скачать готовый скрипт выгрузки данных из Аршина (.py)', 'showExportPyDialogArshin')
     .addItem('3. Загрузить JSON с ответами из Аршина', 'showImportDialogArshin')
     .addItem('4. Создать XML для ЕИС ФСА', 'exportToFSA')
+    .addItem('5. Записать в историю', 'syncHistory')
     .addToUi();
 }
 
@@ -15,30 +16,38 @@ function onOpen() {
 
 function createXMLToArshin() {
   const ui = SpreadsheetApp.getUi();
-
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const data = sheet.getDataRange().getValues();
 
   if (data.length <= 2) {
-    SpreadsheetApp.getUi().alert('Таблица пуста или содержит только заголовки! Создание файла выгрузки быссмысленно.');
+    SpreadsheetApp.getUi().alert('Таблица пуста или содержит только заголовки! Создание файла выгрузки бессмысленно.');
     return;
   }
 
+  // Используем шаблон, чтобы передать последнюю строку в HTML
   const htmlTemplate = HtmlService.createTemplateFromFile('ExportDataToArshin');
-  const htmlOutput = htmlTemplate.evaluate().setWidth(400).setHeight(150);
-  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Экспорт в XML');
+  htmlTemplate.lastRow = data.length; // Передаем число строк в шаблон
+
+  // Увеличили высоту окна до 220, чтобы поместились новые поля ввода
+  const htmlOutput = htmlTemplate.evaluate().setWidth(400).setHeight(300);
+  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Экспорт в XML для ФГИС Аршин');
 }
 
 
 // Генерация XML строки (вызывается из HTML интерфейса)
-function generateXmlContent() {
+function generateXmlContent(startRow, endRow) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const data = sheet.getDataRange().getValues();
 
   let xmlString = '<?xml version="1.0" encoding="UTF-8"?>\n<gost:application xmlns:gost="urn://fgis-arshin.gost.ru/module-verifications/import/2020-06-19">\n';
   const headers = data[0];
 
-  for (let i = 2; i < data.length; i++) {
+  // Переводим номера строк (1-базис) в индексы массива JS (0-базис)
+  // Защита: индекс не может быть меньше 2 (строка 3), если у вас данные с 3-й строки
+  let startIdx = Math.max(2, startRow - 1);
+  let endIdx = Math.min(data.length - 1, endRow - 1);
+
+  for (let i = startIdx; i <= endIdx; i++) {
     xmlString += '    <gost:result>\n';
     let valid = data[i][9] == 'Пригодно';
     xmlString += '        <gost:miInfo>\n';
@@ -117,7 +126,7 @@ function showExportPyDialogArshin() {
       .setWidth(400)
       .setHeight(250)
       .setTitle('Генерация скрипта Python');
-  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Экспорт в .py файл');
+  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Экспорт в .py файл для получения данных из ФГИС Аршин');
 }
 
 
@@ -132,9 +141,6 @@ function generatePythonScriptArshin(startRow, endRow) {
   if (isNaN(endRow) || endRow < startRow) endRow = sheet.getLastRow();
 
   for (let r = startRow; r <= endRow; r++) {
-    let cellAK = sheet.getRange(r, 37).getValue();
-    if (cellAK != '') continue;
-
     let cellB = sheet.getRange(r, 2).getValue();
     let cellD = sheet.getRange(r, 4).getValue();
 
@@ -326,7 +332,7 @@ function showImportDialogArshin() {
       .setWidth(450)
       .setHeight(200)
       .setTitle('Загрузка ответов из JSON');
-  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Импорт данных');
+  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Загрузка данных из ФГИС Аршин');
 }
 
 // Функция сбора данных из таблицы для передачи в HTML (вызывается из ExportDialog)
@@ -433,7 +439,7 @@ function exportToFSA() {
       .setWidth(400)
       .setHeight(250)
       .setTitle('Генерация XML для ЕИС ФСА');
-  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Экспорт в XML');
+  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Экспорт в XML для ЕИС ФСА');
 }
 
 
@@ -506,5 +512,132 @@ function generateFsaXml(startRow, endRow) {
   xml += '</Message>';
 
   return xml;
+}
+
+
+
+// ------------------------------------------------------------------------------------------------------------------
+// 5
+// ------------------------------------------------------------------------------------------------------------------
+
+function syncHistory() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sourceSheet = ss.getSheetByName("Лист1");
+
+  if (!sourceSheet) {
+    SpreadsheetApp.getUi().alert('Ошибка: Лист "Лист1" не найден!');
+    return;
+  }
+
+  let historySheet = ss.getSheetByName("История");
+
+  // 1. Проверяем наличие листа "История", если нет — создаем
+  if (!historySheet) {
+    historySheet = ss.insertSheet("История");
+
+    // Копируем строку 2 с Лист1 в строку 2 листа История
+    const sourceRange = sourceSheet.getRange("2:2");
+    const targetRange = historySheet.getRange("2:2");
+    sourceRange.copyTo(targetRange);
+
+    // В ячейку AM2 (столбец 39) вносим текст "Дата изменения"
+    historySheet.getRange("AM2").setValue("Дата изменения");
+  }
+
+  const sourceLastRow = sourceSheet.getLastRow();
+  if (sourceLastRow < 3) {
+    SpreadsheetApp.getUi().alert('На листе "Лист1" нет данных для переноса (строки ниже 2-й пусты).');
+    return;
+  }
+
+  // Читаем все данные Лист1 со строки 3
+  const sourceData = sourceSheet.getRange(3, 1, sourceLastRow - 2, sourceSheet.getLastColumn()).getValues();
+
+  // Получаем текущие данные из листа История
+  let historyLastRow = historySheet.getLastRow();
+  let historyData = [];
+  if (historyLastRow >= 3) {
+    historyData = historySheet.getRange(3, 1, historyLastRow - 2, historySheet.getLastColumn()).getValues();
+  }
+
+  // Создаем карту (Map) для поиска строк в Истории по ключу (Столбец A = индекс 0)
+  const historyMap = new Map();
+  for (let j = 0; j < historyData.length; j++) {
+    const key = String(historyData[j][0]).trim();
+    if (key) {
+      historyMap.set(key, {
+        rowValues: historyData[j],
+        rowNum: j + 3
+      });
+    }
+  }
+
+  const currentDate = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
+  let addedCount = 0;
+  let updatedCount = 0;
+  let skippedRows = []; // Массив для хранения номеров пропущенных строк
+
+  // Проходим по всем строкам из Лист1
+  for (let i = 0; i < sourceData.length; i++) {
+    const sourceRow = sourceData[i];
+    const key = String(sourceRow[0]).trim();
+    const actualRowIndex = i + 3; // Физический номер строки на "Лист1"
+
+    if (!key) continue; // Пропускаем абсолютно пустые ключи
+
+    // Индексы: AK — это 36 (37-й столбец), AL — это 37 (38-й столбец)
+    const akValue = String(sourceRow[36]).trim();
+    const alValue = String(sourceRow[37]).trim();
+
+    // ИЗМЕНЕНИЕ 1: Если ячейка в столбце AK не заполнена, строку полностью игнорируем
+    if (akValue === "") {
+      skippedRows.push(actualRowIndex);
+      continue;
+    }
+
+    if (historyMap.has(key)) {
+      // Строка существует в Истории
+      const historyEntry = historyMap.get(key);
+      const histAK = String(historyEntry.rowValues[36]).trim();
+      const histAL = String(historyEntry.rowValues[37]).trim();
+
+      if (akValue === histAK && alValue === histAL) {
+        continue;
+      }
+
+      // Обновляем, только если в Истории не заполнена клетка AL
+      if (histAL === "") {
+        const targetRowNum = historyEntry.rowNum;
+
+        // Обновляем строку и ставим дату
+        historySheet.getRange(targetRowNum, 1, 1, sourceRow.length).setValues([sourceRow]);
+        historySheet.getRange(targetRowNum, 39).setValue(currentDate);
+
+        updatedCount++;
+      }
+    } else {
+      // Строка отсутствует в Истории -> Добавляем как новую
+      historyLastRow = historySheet.getLastRow();
+      const nextRowNum = historyLastRow + 1;
+
+      historySheet.getRange(nextRowNum, 1, 1, sourceRow.length).setValues([sourceRow]);
+      historySheet.getRange(nextRowNum, 39).setValue(currentDate);
+
+      historyMap.set(key, { rowValues: sourceRow, rowNum: nextRowNum });
+      addedCount++;
+    }
+  }
+
+  // Формируем финальное уведомление
+  let reportMessage = `Синхронизация завершена!\n\nДобавлено новых строк: ${addedCount}\nОбновлено строк: ${updatedCount}`;
+
+  // Вывод списка строк, которые не были скопированы из-за пустого столбца AK
+  if (skippedRows.length > 0) {
+    reportMessage += `\n\nНе скопированы (пустой столбец AK) строки №: ${skippedRows.join(', ')}`;
+  } else {
+    reportMessage += `\n\nВсе проверенные строки имели заполненный столбец AK.`;
+  }
+
+  SpreadsheetApp.getUi().alert(reportMessage);
 }
 

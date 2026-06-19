@@ -3,30 +3,87 @@
   <head>
     <base target="_top">
     <style>
-      body { font-family: Arial, sans-serif; padding: 15px; color: #333; }
-      .field { margin-bottom: 15px; }
-      label { display: block; margin-bottom: 5px; font-weight: bold; }
-      input[type="text"] { width: 95%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-      .btn { background-color: #1a73e8; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 14px; display: inline-block; }
+      body {
+        font-family: Arial, sans-serif;
+        padding: 15px;
+        color: #333;
+        margin: 0;
+        box-sizing: border-box;
+      }
+      /* Все элементы управления теперь занимают всю ширину и идут друг под другом */
+      .field {
+        margin-bottom: 15px;
+        display: flex;
+        flex-direction: column;
+      }
+      label {
+        margin-bottom: 6px;
+        font-weight: bold;
+        font-size: 13px;
+      }
+      input[type="text"], input[type="number"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        width: 100%; /* Полная ширина столбца */
+      }
+      .btn {
+        background-color: #1a73e8;
+        color: white;
+        padding: 11px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 14px;
+        display: block;
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+        margin-top: 5px;
+      }
       .btn:hover { background-color: #1557b0; }
+      .btn:disabled { background-color: #cccccc; cursor: not-allowed; }
     </style>
   </head>
   <body>
+    <!-- 1. Имя файла -->
     <div class="field">
       <label for="filename">Укажите имя файла (без .xml):</label>
       <input type="text" id="filename" value="export_data">
     </div>
 
+    <!-- 2. Начальная строка -->
+    <div class="field">
+      <label for="startRow">С какой строки выгружать:</label>
+      <input type="number" id="startRow" value="3" min="2">
+    </div>
+
+    <!-- 3. Конечная строка -->
+    <div class="field">
+      <label for="endRow">По какую строку выгружать:</label>
+      <input type="number" id="endRow" value="<?= lastRow ?>" min="2">
+    </div>
+
+    <!-- 4. Кнопка действия -->
     <button class="btn" id="processBtn" onclick="startDownload()">Сгенерировать и скачать</button>
     <a id="downloadLink" style="display:none;"></a>
 
     <script>
       function startDownload() {
         var btn = document.getElementById('processBtn');
+        var startRow = parseInt(document.getElementById('startRow').value, 10);
+        var endRow = parseInt(document.getElementById('endRow').value, 10);
+
+        if (isNaN(startRow) || isNaN(endRow) || startRow < 2 || startRow > endRow) {
+          alert('Пожалуйста, укажите корректный диапазон строк! Начальная строка должна быть не меньше 2.');
+          return;
+        }
+
         btn.innerText = 'Подготовка...';
         btn.disabled = true;
 
-        // Вызываем серверную функцию генерации данных
         google.script.run.withSuccessHandler(function(base64Data) {
           var userFileName = document.getElementById('filename').value.trim() || 'export';
           if(!userFileName.endsWith('.xml')) { userFileName += '.xml'; }
@@ -34,10 +91,16 @@
           var link = document.getElementById('downloadLink');
           link.href = "data:text/xml;charset=utf-8;base64," + base64Data;
           link.download = userFileName;
-          link.click(); // Инициируем скачивание браузером
+          link.click();
 
-          google.script.host.close(); // Закрываем диалог
-        }).generateXmlContent();
+          google.script.host.close();
+        })
+        .withFailureHandler(function(err) {
+          alert('Ошибка при генерации: ' + err.message);
+          btn.innerText = 'Сгенерировать и скачать';
+          btn.disabled = false;
+        })
+        .generateXmlContent(startRow, endRow);
       }
     </script>
   </body>
